@@ -18,6 +18,9 @@ export const loginRequest = {
   scopes: [
     "User.Read",
     "Calendars.Read",
-    "Calendars.Read.Shared"
+    "Calendars.Read.Shared",
+    "Files.ReadWrite",
+    "Files.ReadWrite.All",
+    "Sites.ReadWrite.All"
   ]
 }; 

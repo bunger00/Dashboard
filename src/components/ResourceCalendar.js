@@ -625,57 +625,56 @@ const ResourceCalendar = ({ graphClient }) => {
     );
   });
 
+  const checkOrCreateDashboardFolder = async (graphClient) => {
+    try {
+      console.log("Sjekker om Dashbord-mappen eksisterer...");
+      const response = await graphClient
+        .api("/me/drive/root:/Dashbord")
+        .get();
+      
+      console.log("Dashbord-mappe funnet:", response);
+      return response.id;
+    } catch (error) {
+      if (error.statusCode === 404) {
+        console.log("Dashbord-mappe ikke funnet, oppretter ny...");
+        try {
+          const newFolder = await graphClient
+            .api("/me/drive/root/children")
+            .post({
+              name: "Dashbord",
+              folder: {},
+              "@microsoft.graph.conflictBehavior": "replace"
+            });
+          
+          console.log("Ny Dashbord-mappe opprettet:", newFolder);
+          return newFolder.id;
+        } catch (createError) {
+          console.error("Feil ved opprettelse av Dashbord-mappe:", createError);
+          throw new Error("Kunne ikke opprette Dashbord-mappe: " + createError.message);
+        }
+      } else {
+        console.error("Uventet feil ved sjekk av Dashbord-mappe:", error);
+        throw error;
+      }
+    }
+  };
+
   const lastManuelleVerdier = async () => {
     try {
-      // Sjekk først om Dashbord-mappen eksisterer
-      let harDashbordMappe = false;
-      try {
-        const mapper = await graphClient
-          .api('/me/drive/root/children')
-          .filter("name eq 'Dashbord'")
-          .get();
-        harDashbordMappe = mapper.value && mapper.value.length > 0;
-      } catch (error) {
-        console.log('Oppretter Dashbord-mappe...');
-      }
-
-      // Opprett mappen hvis den ikke finnes
-      if (!harDashbordMappe) {
-        try {
-          await graphClient
-            .api('/me/drive/root/children')
-            .post({
-              name: 'Dashbord',
-              folder: {}
-            });
-          console.log('Dashbord-mappe opprettet');
-        } catch (error) {
-          console.log('Kunne ikke opprette Dashbord-mappe');
-        }
-        // Start med tom tilstand siden dette er første gang
-        setManuelleVerdier({});
-        return;
-      }
-
-      // Prøv å hente eksisterende verdier
+      // Prøv å hente eksisterende verdier direkte fra OneDrive
       try {
         const response = await graphClient
-          .api('/me/drive/root:/Dashbord/manuelleVerdier.json:/content')
+          .api('/me/drive/special/approot:/manuelleVerdier.json:/content')
           .get();
         
         if (response) {
           const verdier = JSON.parse(response);
           setManuelleVerdier(verdier);
-          console.log('Verdier lastet');
+          console.log('Verdier lastet fra approot');
         }
       } catch (error) {
-        // Hvis filen ikke finnes, start med tom tilstand
-        if (error.statusCode === 404) {
-          setManuelleVerdier({});
-        } else {
-          console.log('Kunne ikke laste verdier, starter med tom tilstand');
-          setManuelleVerdier({});
-        }
+        console.log('Kunne ikke laste verdier fra approot, starter med tom tilstand');
+        setManuelleVerdier({});
       }
     } catch (error) {
       console.log('Starter med tom tilstand');
@@ -686,28 +685,11 @@ const ResourceCalendar = ({ graphClient }) => {
   const lagreManuelleVerdier = async (verdier) => {
     try {
       await graphClient
-        .api('/me/drive/root:/Dashbord/manuelleVerdier.json:/content')
+        .api('/me/drive/special/approot:/manuelleVerdier.json:/content')
         .put(JSON.stringify(verdier));
+      console.log('Verdier lagret til approot');
     } catch (error) {
-      // Hvis feilen er at mappen ikke finnes, prøv å opprette den og lagre på nytt
-      if (error.statusCode === 404) {
-        try {
-          await graphClient
-            .api('/me/drive/root/children')
-            .post({
-              name: 'Dashbord',
-              folder: {}
-            });
-          // Prøv å lagre på nytt etter at mappen er opprettet
-          await graphClient
-            .api('/me/drive/root:/Dashbord/manuelleVerdier.json:/content')
-            .put(JSON.stringify(verdier));
-        } catch (innerError) {
-          console.log('Kunne ikke lagre verdier');
-        }
-      } else {
-        console.log('Kunne ikke lagre verdier');
-      }
+      console.error('Kunne ikke lagre verdier:', error);
     }
   };
 
