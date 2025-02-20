@@ -635,18 +635,8 @@ const ResourceCalendar = ({ graphClient }) => {
   };
 
   useEffect(() => {
-    lastManuelleVerdier();
-  }, []);
-
-  useEffect(() => {
-    if (Object.keys(manuelleVerdier).length > 0) {
-      lagreManuelleVerdier(manuelleVerdier);
-    }
-  }, [manuelleVerdier, lagreManuelleVerdier]);
-
-  useEffect(() => {
     hentKalenderData();
-  }, [antallUkerValgt, hentKalenderData]);
+  }, [antallUkerValgt, getStartDato, hentKalenderData]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--num-weeks', antallUkerValgt);
@@ -666,6 +656,10 @@ const ResourceCalendar = ({ graphClient }) => {
     
     setKalenderData(filtrertData);
   }, [antallUkerValgt, fullKalenderData, getStartDato]);
+
+  useEffect(() => {
+    lastManuelleVerdier();
+  }, [lastManuelleVerdier]);
 
   if (laster) {
     return <div>Laster kalenderdata...</div>;

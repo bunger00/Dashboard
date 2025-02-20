@@ -9,6 +9,17 @@ import ConfettiButton from './components/ConfettiButton';
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
+// Graph API scopes
+const scopes = [
+  'User.Read',
+  'Calendars.Read',
+  'Calendars.Read.Shared'
+];
+
+// Retry configuration
+const retryDelay = 1000; // 1 second
+const maxRetries = 3;
+
 function App() {
   return (
     <MsalProvider instance={msalInstance}>
@@ -23,23 +34,53 @@ function MainContent() {
   const [graphClient, setGraphClient] = useState(null);
 
   const getToken = async () => {
-    const request = {
-      scopes: [
-        "User.Read",
-        "Calendars.Read",
-        "Calendars.Read.Shared"
-      ],
-      account: accounts[0]
-    };
-
     try {
-      return await instance.acquireTokenSilent(request);
+      const account = msalInstance.getActiveAccount();
+      if (!account) {
+        throw new Error('No active account! Verify a user has been signed in and setActiveAccount has been called.');
+      }
+      
+      const response = await msalInstance.acquireTokenSilent({
+        scopes: scopes,
+        account: account
+      });
+      
+      return response.accessToken;
     } catch (error) {
-      if (error.name === "InteractionRequiredAuthError") {
-        return await instance.acquireTokenPopup(request);
+      console.error('Error getting token:', error);
+      if (error instanceof InteractionRequiredAuthError) {
+        try {
+          await msalInstance.acquireTokenRedirect({
+            scopes: scopes
+          });
+        } catch (redirectError) {
+          console.error('Error during redirect:', redirectError);
+          throw redirectError;
+        }
       }
       throw error;
     }
+  };
+
+  const authProvider = async (callback) => {
+    let attempts = 0;
+    
+    const tryRequest = async () => {
+      try {
+        const token = await getToken();
+        return callback(token);
+      } catch (error) {
+        attempts++;
+        if (attempts < maxRetries) {
+          console.log(`Retry attempt ${attempts} after ${retryDelay}ms`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          return tryRequest();
+        }
+        throw error;
+      }
+    };
+    
+    return tryRequest();
   };
 
   useEffect(() => {
@@ -48,7 +89,7 @@ function MainContent() {
         authProvider: async (done) => {
           try {
             const response = await getToken();
-            done(null, response.accessToken);
+            done(null, response);
           } catch (error) {
             done(error, null);
           }
