@@ -6,6 +6,49 @@ import ColorLegend from './ColorLegend';
 import CourseCalendar from './CourseCalendar';
 import PrognoseDialog from './PrognoseDialog';
 
+// Retry configuration
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 3;
+const BACKOFF_FACTOR = 2;
+
+// Rate limiting
+const API_CALLS_PER_WINDOW = 3;
+const TIME_WINDOW_MS = 1000; // 1 second
+let apiCallsCount = 0;
+let lastResetTime = Date.now();
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const waitForRateLimit = async () => {
+  const now = Date.now();
+  if (now - lastResetTime >= TIME_WINDOW_MS) {
+    apiCallsCount = 0;
+    lastResetTime = now;
+  }
+
+  if (apiCallsCount >= API_CALLS_PER_WINDOW) {
+    await sleep(TIME_WINDOW_MS - (now - lastResetTime));
+    apiCallsCount = 0;
+    lastResetTime = Date.now();
+  }
+  
+  apiCallsCount++;
+};
+
+const retryWithBackoff = async (fn, retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY) => {
+  try {
+    await waitForRateLimit();
+    return await fn();
+  } catch (error) {
+    if (retries === 0) {
+      throw error;
+    }
+    console.log(`Retry attempt left: ${retries}. Waiting ${delay}ms before next attempt.`);
+    await sleep(delay);
+    return retryWithBackoff(fn, retries - 1, delay * BACKOFF_FACTOR);
+  }
+};
+
 const ansatte = [
   { navn: 'Bjørn', epost: 'bjornu@leancommunications.no' },
   { navn: 'Jørn', epost: 'jornt@leancommunications.no' },
@@ -80,19 +123,27 @@ const ResourceCalendar = ({ graphClient }) => {
 
   const hentBrukerInfo = async (ansatt) => {
     try {
-      const resultat = await graphClient.api(`/users/${ansatt.epost}/calendar`)
-        .get();
-      return { id: resultat.owner.address, displayName: ansatt.navn };
+      const getBrukerInfo = async () => {
+        const resultat = await graphClient.api(`/users/${ansatt.epost}/calendar`)
+          .get();
+        return { id: resultat.owner.address, displayName: ansatt.navn };
+      };
+
+      return await retryWithBackoff(getBrukerInfo);
     } catch (error) {
       try {
-        const delte = await graphClient.api('/me/calendars')
-          .get();
-        const kalender = delte.value.find(k => 
-          k.owner?.address?.toLowerCase() === ansatt.epost.toLowerCase()
-        );
-        if (kalender) {
-          return { id: kalender.owner.address, displayName: ansatt.navn };
-        }
+        const getDelteKalendere = async () => {
+          const delte = await graphClient.api('/me/calendars')
+            .get();
+          const kalender = delte.value.find(k => 
+            k.owner?.address?.toLowerCase() === ansatt.epost.toLowerCase()
+          );
+          if (kalender) {
+            return { id: kalender.owner.address, displayName: ansatt.navn };
+          }
+        };
+
+        return await retryWithBackoff(getDelteKalendere);
       } catch (innerError) {
         console.error(`Feil ved henting av delte kalendere for ${ansatt.navn}:`, innerError);
       }
@@ -103,61 +154,67 @@ const ResourceCalendar = ({ graphClient }) => {
 
   const hentKalenderHendelser = async (brukerId, start, slutt) => {
     try {
-      console.log(`Henter hendelser for ${brukerId} fra ${start.toLocaleDateString()} til ${slutt.toLocaleDateString()}`);
-      
-      const resultat = await graphClient.api(`/users/${brukerId}/calendar/calendarView`)
-        .query({
-          startDateTime: start.toISOString(),
-          endDateTime: slutt.toISOString(),
-          $top: 999
-        })
-        .header('Prefer', 'outlook.timezone="Europe/Oslo"')
-        .select('subject,start,end,showAs,attendees')
-        .orderby('start/dateTime')
-        .get();
+      const getHendelser = async () => {
+        const resultat = await graphClient.api(`/users/${brukerId}/calendar/calendarView`)
+          .query({
+            startDateTime: start.toISOString(),
+            endDateTime: slutt.toISOString(),
+            $top: 999
+          })
+          .header('Prefer', 'outlook.timezone="Europe/Oslo"')
+          .select('subject,start,end,showAs,attendees')
+          .orderby('start/dateTime')
+          .get();
+          
+        let hendelser = resultat.value;
+        let nextLink = resultat['@odata.nextLink'];
         
-      let hendelser = resultat.value;
-      let nextLink = resultat['@odata.nextLink'];
-      
-      while (nextLink) {
-        const nesteResultat = await graphClient.api(nextLink).get();
-        hendelser = [...hendelser, ...nesteResultat.value];
-        nextLink = nesteResultat['@odata.nextLink'];
-      }
-      
-      console.log(`Fant totalt ${hendelser.length} hendelser`);
-      return hendelser;
+        while (nextLink) {
+          await waitForRateLimit();
+          const nesteResultat = await graphClient.api(nextLink).get();
+          hendelser = [...hendelser, ...nesteResultat.value];
+          nextLink = nesteResultat['@odata.nextLink'];
+        }
+        
+        return hendelser;
+      };
+
+      return await retryWithBackoff(getHendelser);
     } catch (error) {
       try {
-        const delte = await graphClient.api('/me/calendars')
-          .get();
-        const kalender = delte.value.find(k => 
-          k.owner?.address?.toLowerCase() === brukerId.toLowerCase()
-        );
-        if (kalender) {
-          const resultat = await graphClient.api(`/me/calendars/${kalender.id}/calendarView`)
-            .query({
-              startDateTime: start.toISOString(),
-              endDateTime: slutt.toISOString(),
-              $top: 999
-            })
-            .header('Prefer', 'outlook.timezone="Europe/Oslo"')
-            .select('subject,start,end,showAs,attendees')
-            .orderby('start/dateTime')
+        const getDelteHendelser = async () => {
+          const delte = await graphClient.api('/me/calendars')
             .get();
+          const kalender = delte.value.find(k => 
+            k.owner?.address?.toLowerCase() === brukerId.toLowerCase()
+          );
+          if (kalender) {
+            const resultat = await graphClient.api(`/me/calendars/${kalender.id}/calendarView`)
+              .query({
+                startDateTime: start.toISOString(),
+                endDateTime: slutt.toISOString(),
+                $top: 999
+              })
+              .header('Prefer', 'outlook.timezone="Europe/Oslo"')
+              .select('subject,start,end,showAs,attendees')
+              .orderby('start/dateTime')
+              .get();
             
-          let hendelser = resultat.value;
-          let nextLink = resultat['@odata.nextLink'];
-          
-          while (nextLink) {
-            const nesteResultat = await graphClient.api(nextLink).get();
-            hendelser = [...hendelser, ...nesteResultat.value];
-            nextLink = nesteResultat['@odata.nextLink'];
+            let hendelser = resultat.value;
+            let nextLink = resultat['@odata.nextLink'];
+            
+            while (nextLink) {
+              await waitForRateLimit();
+              const nesteResultat = await graphClient.api(nextLink).get();
+              hendelser = [...hendelser, ...nesteResultat.value];
+              nextLink = nesteResultat['@odata.nextLink'];
+            }
+            
+            return hendelser;
           }
-          
-          console.log(`Fant totalt ${hendelser.length} hendelser fra delt kalender`);
-          return hendelser;
-        }
+        };
+
+        return await retryWithBackoff(getDelteHendelser);
       } catch (innerError) {
         console.error('Feil ved henting av delte kalenderhendelser:', innerError);
       }
