@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MsalProvider, useMsal, useIsAuthenticated } from "@azure/msal-react";
-import { PublicClientApplication } from "@azure/msal-browser";
+import { PublicClientApplication, InteractionRequiredAuthError } from "@azure/msal-browser";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { msalConfig } from "./config/authConfig";
 import ResourceCalendar from './components/ResourceCalendar';
@@ -35,12 +35,12 @@ function MainContent() {
 
   const getToken = async () => {
     try {
-      const account = msalInstance.getActiveAccount();
+      const account = accounts[0];
       if (!account) {
         throw new Error('No active account! Verify a user has been signed in and setActiveAccount has been called.');
       }
       
-      const response = await msalInstance.acquireTokenSilent({
+      const response = await instance.acquireTokenSilent({
         scopes: scopes,
         account: account
       });
@@ -50,9 +50,10 @@ function MainContent() {
       console.error('Error getting token:', error);
       if (error instanceof InteractionRequiredAuthError) {
         try {
-          await msalInstance.acquireTokenRedirect({
+          const response = await instance.acquireTokenRedirect({
             scopes: scopes
           });
+          return response.accessToken;
         } catch (redirectError) {
           console.error('Error during redirect:', redirectError);
           throw redirectError;
@@ -62,34 +63,13 @@ function MainContent() {
     }
   };
 
-  const authProvider = async (callback) => {
-    let attempts = 0;
-    
-    const tryRequest = async () => {
-      try {
-        const token = await getToken();
-        return callback(token);
-      } catch (error) {
-        attempts++;
-        if (attempts < maxRetries) {
-          console.log(`Retry attempt ${attempts} after ${retryDelay}ms`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          return tryRequest();
-        }
-        throw error;
-      }
-    };
-    
-    return tryRequest();
-  };
-
   useEffect(() => {
     if (isAuthenticated && accounts[0]) {
       const client = Client.init({
         authProvider: async (done) => {
           try {
-            const response = await getToken();
-            done(null, response);
+            const token = await getToken();
+            done(null, token);
           } catch (error) {
             done(error, null);
           }
@@ -103,11 +83,7 @@ function MainContent() {
     try {
       console.log('Starter innlogging...');
       instance.loginRedirect({
-        scopes: [
-          "User.Read",
-          "Calendars.Read",
-          "Calendars.Read.Shared"
-        ],
+        scopes: scopes,
         prompt: "consent"
       });
     } catch (error) {
