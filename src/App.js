@@ -56,7 +56,7 @@ function MainContent() {
       });
       setGraphClient(client);
     }
-  }, [isAuthenticated, accounts]);
+  }, [isAuthenticated, accounts, getToken]);
 
   const handleLogin = () => {
     try {

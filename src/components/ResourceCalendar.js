@@ -642,11 +642,11 @@ const ResourceCalendar = ({ graphClient }) => {
     if (Object.keys(manuelleVerdier).length > 0) {
       lagreManuelleVerdier(manuelleVerdier);
     }
-  }, [manuelleVerdier]);
+  }, [manuelleVerdier, lagreManuelleVerdier]);
 
   useEffect(() => {
     hentKalenderData();
-  }, [antallUkerValgt]);
+  }, [antallUkerValgt, hentKalenderData]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--num-weeks', antallUkerValgt);
