@@ -1,0 +1,93 @@
+.kurs-oversikt {
+  margin-top: 30px;
+  padding: 20px;
+  background: var(--card-background);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.kurs-oversikt h2 {
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.kurs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.kurs-kort {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.kurs-kort:hover {
+  transform: translateY(-2px);
+}
+
+.kurs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.kurs-header h3 {
+  font-size: 18px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.kurs-dato {
+  font-size: 14px;
+  color: var(--text-secondary);
+  background: var(--background-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.kurs-info {
+  margin-bottom: 15px;
+}
+
+.info-rad {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.info-rad span:first-child {
+  color: var(--text-secondary);
+}
+
+.info-rad span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.kurs-status {
+  text-align: right;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status.ledig {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.status.fullt {
+  background: #FFEBEE;
+  color: #C62828;
+} 

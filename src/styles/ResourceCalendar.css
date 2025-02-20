@@ -1,0 +1,724 @@
+:root {
+  --cell-size: 40px;
+  --week-width: 250px;
+  --name-width: 120px;
+  --primary-color: #2196F3;
+  --secondary-color: #1976D2;
+  --success-color: #4CAF50;
+  --warning-color: #FF5252;
+  --background-color: #F8F9FA;
+  --card-background: #FFFFFF;
+  --border-color: #E0E0E0;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+}
+
+.ressurskalender {
+  padding: 30px;
+  background-color: var(--background-color);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  width: fit-content;
+}
+
+.kalender-grid {
+  background: var(--card-background);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  width: fit-content;
+  position: relative;
+  z-index: 1;
+}
+
+.header-container {
+  display: grid;
+  grid-template-columns: var(--name-width) repeat(var(--num-weeks), var(--week-width));
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 15px;
+  width: fit-content;
+  position: relative;
+  z-index: 1;
+}
+
+.uke-kolonne {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 4px;
+  padding: 0 10px;
+  border-right: 1px solid var(--border-color);
+  position: relative;
+  min-height: 40px;
+  background: #f0f4f8;
+}
+
+.uke-kolonne:last-child {
+  border-right: none;
+}
+
+.uke-header {
+  margin-top: 85px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  z-index: 3;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.uke-nummer {
+  font-weight: 500;
+  background-color: var(--card-background);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.uke-sum {
+  color: #2196F3;
+  font-size: 13px;
+}
+
+.dag-bokstaver {
+  display: none;
+}
+
+.dato-rad {
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell-size));
+  gap: 4px;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.dato-celle {
+  width: var(--cell-size);
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  position: relative;
+}
+
+.ansatt-rad {
+  display: grid;
+  grid-template-columns: var(--name-width) repeat(var(--num-weeks), var(--week-width));
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+  width: fit-content;
+}
+
+.ansatt-navn {
+  padding-right: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.dager-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.uke-gruppe {
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell-size));
+  gap: 4px;
+  padding: 0 10px;
+  justify-content: center;
+}
+
+.uke-gruppe:last-child {
+  border-right: none;
+}
+
+.dag-celle {
+  position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1;
+  text-shadow: none;
+}
+
+.dag-celle:hover {
+  z-index: 9998;
+}
+
+/* Fargeskala basert på tilgjengelige timer */
+.dag-celle.gronn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.dag-celle.lysgronn {
+  background-color: #81C784;
+  color: black;
+}
+
+.dag-celle.gul {
+  background-color: #FFC107;
+  color: black;
+}
+
+.dag-celle.rod {
+  background-color: #F44336;
+  color: white;
+}
+
+/* Firmafarger med tekstfarger */
+.dag-celle.bla {
+  background-color: #2196F3;
+  color: white;
+}
+
+.dag-celle.firmagronn {
+  background-color: #388E3C;
+  color: white;
+}
+
+.dag-celle.westend {
+  background-color: #FF9800;
+  color: black;
+}
+
+.dag-celle.knallgul {
+  background-color: #FFD700;
+  color: black;
+}
+
+.dag-celle.svart {
+  background-color: #212121;
+  color: white;
+}
+
+.dag-celle.lysebla {
+  background-color: #E3F2FD;
+  color: black;
+}
+
+.dag-celle.consto {
+  background-color: #E53935;
+  color: white;
+}
+
+.dag-celle.inspirert {
+  background-color: #A5D6A7;
+  color: black;
+}
+
+.dag-celle.ramboll {
+  background-color: #E8F5E9;
+  color: black;
+}
+
+.dag-celle.neso {
+  background-color: #1A237E;
+  color: white;
+}
+
+.dag-celle.lang-hendelse {
+  background-color: #FFE4E8;
+  color: black;
+  border: 2px solid #333333;
+}
+
+/* Oppdater hover-tilstander med samme tekstfarge */
+.dag-celle.gronn:hover {
+  background-color: #388E3C;
+  color: white;
+}
+
+.dag-celle.lysgronn:hover {
+  background-color: #66BB6A;
+  color: black;
+}
+
+.dag-celle.gul:hover {
+  background-color: #FFA000;
+  color: black;
+}
+
+.dag-celle.rod:hover {
+  background-color: #D32F2F;
+  color: white;
+}
+
+.dag-celle.bla:hover {
+  background-color: #1976D2;
+  color: white;
+}
+
+.dag-celle.firmagronn:hover {
+  background-color: #2E7D32;
+  color: white;
+}
+
+.dag-celle.westend:hover {
+  background-color: #F57C00;
+  color: black;
+}
+
+.dag-celle.knallgul:hover {
+  background-color: #FFC400;
+  color: black;
+}
+
+.dag-celle.svart:hover {
+  background-color: #000000;
+  color: white;
+}
+
+.dag-celle.lysebla:hover {
+  background-color: #BBDEFB;
+  color: black;
+}
+
+.dag-celle.consto:hover {
+  background-color: #C62828;
+  color: white;
+}
+
+.dag-celle.inspirert:hover {
+  background-color: #81C784;
+  color: black;
+}
+
+.dag-celle.ramboll:hover {
+  background-color: #C8E6C9;
+  color: black;
+}
+
+.dag-celle.neso:hover {
+  background-color: #0D47A1;
+  color: white;
+}
+
+.dag-celle.lang-hendelse:hover {
+  background-color: #FFD0D6;
+  color: black;
+  border-color: #000000;
+}
+
+/* Fjern text-shadow siden vi nå har optimal kontrast */
+.dag-celle {
+  text-shadow: none;
+}
+
+/* Oppdater prognose-verdi farger */
+.prognose-verdi {
+  font-weight: bold;
+  font-size: 14px;
+  color: inherit;
+}
+
+.prognose-verdi.svart-tekst {
+  color: black;
+}
+
+.kontroll-panel {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: var(--card-background);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.kontroll-rad {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+}
+
+.uke-velger {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 150px;
+}
+
+.uke-velger label {
+  font-size: 14px;
+  color: #666;
+}
+
+.uke-select {
+  padding: 10px 15px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-background);
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.uke-select:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+}
+
+.uke-select:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.hendelser-tooltip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  min-width: 250px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease-in-out;
+  margin-bottom: 10px;
+}
+
+.dag-celle:hover .hendelser-tooltip {
+  display: block;
+}
+
+.hendelser-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 20px;
+  transform: rotate(225deg);
+  width: 12px;
+  height: 12px;
+  background: white;
+  box-shadow: -2px -2px 5px rgba(0,0,0,0.06);
+  z-index: 9999;
+}
+
+.tooltip-header {
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--background-color);
+  border-radius: 8px 8px 0 0;
+}
+
+.helligdag-navn {
+  font-size: 12px;
+  color: #FF5252;
+  margin-top: 4px;
+}
+
+.tooltip-content {
+  padding: 10px 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.hendelse {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hendelse:last-child {
+  border-bottom: none;
+}
+
+.hendelse-tid {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.hendelse-tittel {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Styling for visningstype-velger */
+.visningstype-velger {
+  display: flex;
+  gap: 10px;
+  margin-right: 20px;
+}
+
+.visning-knapp {
+  padding: 8px 16px;
+  font-size: 14px;
+  background-color: white;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  margin-right: 8px;
+}
+
+.visning-knapp:hover {
+  background-color: #f5f5f5;
+  border-color: #bbb;
+}
+
+.visning-knapp.aktiv {
+  background-color: #2196F3;
+  color: white;
+  border-color: #1976D2;
+}
+
+/* Forbedre ytelsen med hardware-akselerasjon */
+.visning-knapp,
+.dag-celle,
+.hendelser-tooltip {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Legg til nye stiler for fargeforklaringen */
+.farge-forklaring {
+  margin-top: 20px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.forklaring-tittel {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.forklaring-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.forklaring-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.farge-eksempel {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.farge-eksempel.hvit {
+  background-color: white;
+  border: 1px solid var(--border-color);
+}
+
+/* Gjenbruk eksisterende farger */
+.farge-eksempel.gronn { background-color: #4CAF50; }
+.farge-eksempel.lysgronn { background-color: #81C784; }
+.farge-eksempel.gul { background-color: #FFC107; }
+.farge-eksempel.rod { background-color: #F44336; }
+.farge-eksempel.bla { background-color: #2196F3; }
+.farge-eksempel.firmagronn { background-color: #388E3C; }
+.farge-eksempel.westend { background-color: #FF9800; }
+/* Legg til i farge-eksempel seksjon */
+.farge-eksempel.knallgul { background-color: #FFD700; }
+.farge-eksempel.svart { background-color: #212121; }
+.farge-eksempel.lysebla { background-color: #E3F2FD; }
+
+/* Oppdater farge-eksempel for andre hendelser */
+.farge-eksempel.lang-hendelse {
+  background-color: #FFE4E8;
+  border: 2px solid #333333;
+}
+
+/* Legg til ny farge for Consto */
+.dag-celle.consto {
+  background-color: #E53935; /* Rød farge for Consto */
+}
+
+.dag-celle.consto:hover {
+  background-color: #C62828;
+}
+
+/* Legg til i farge-eksempel seksjon */
+.farge-eksempel.consto { background-color: #E53935; }
+
+/* Legg til ny farge for Inspirert */
+.dag-celle.inspirert {
+  background-color: #A5D6A7; /* Lys grønn */
+}
+
+.dag-celle.inspirert:hover {
+  background-color: #81C784;
+}
+
+/* Legg til i farge-eksempel seksjon */
+.farge-eksempel.inspirert { background-color: #A5D6A7; }
+
+/* Legg til ny farge for Rambøll */
+.dag-celle.ramboll {
+  background-color: #E8F5E9; /* Veldig lys grønn */
+}
+
+.dag-celle.ramboll:hover {
+  background-color: #C8E6C9;
+}
+
+/* Legg til i farge-eksempel seksjon */
+.farge-eksempel.ramboll { background-color: #E8F5E9; }
+
+/* Legg til ny farge for Neso */
+.dag-celle.neso {
+  background-color: #1A237E; /* Mørk blå */
+}
+
+.dag-celle.neso:hover {
+  background-color: #0D47A1;
+}
+
+/* Legg til i farge-eksempel seksjon */
+.farge-eksempel.neso { background-color: #1A237E; }
+
+/* Styling for helligdager */
+.helligdag-markering {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent #FF5252 transparent transparent;
+}
+
+.dag-celle.helligdag {
+  position: relative;
+  border: 2px dashed #FF5252;
+}
+
+.dag-celle.helligdag::after {
+  content: '🎯';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.celle.prognose {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.celle.prognose .verdi {
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.prognose-verdi.svart-tekst {
+  color: black;
+  text-shadow: none;
+}
+
+.prognose-verdi {
+  font-weight: bold;
+  font-size: 14px;
+  color: inherit;
+}
+
+/* Legg til stil for månedsheader */
+.maned-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #f0f4f8;
+  padding: 12px 0;
+  border-right: 2px solid #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  height: 75px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  width: 100%;
+}
+
+.maned-tittel {
+  text-transform: capitalize;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  text-align: center;
+  width: 100%;
+}
+
+.maned-sum {
+  font-size: 20px;
+  color: #2196F3;
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+}
+
+/* Ny stil for månedsheader-container */
+.maned-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  background: #f0f4f8;
+}
+
+/* Legg til stil for månedsskille */
+.uke-kolonne.month-transition {
+  position: relative;
+  border-right: 2px solid #333;
+}
+
+.uke-kolonne.month-transition::after {
+  content: '';
+  position: absolute;
+  top: 75px;
+  bottom: 0;
+  right: 0;
+  width: 2px;
+  background: #333;
+  z-index: 4;
+  height: calc(100% - 75px);
+} 
