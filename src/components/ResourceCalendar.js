@@ -6,48 +6,70 @@ import ColorLegend from './ColorLegend';
 import CourseCalendar from './CourseCalendar';
 import PrognoseDialog from './PrognoseDialog';
 
-// Retry configuration
-const INITIAL_RETRY_DELAY = 1000; // 1 second
-const MAX_RETRIES = 3;
-const BACKOFF_FACTOR = 2;
-
-// Rate limiting
-const API_CALLS_PER_WINDOW = 3;
-const TIME_WINDOW_MS = 1000; // 1 second
-let apiCallsCount = 0;
-let lastResetTime = Date.now();
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-const waitForRateLimit = async () => {
-  const now = Date.now();
-  if (now - lastResetTime >= TIME_WINDOW_MS) {
-    apiCallsCount = 0;
-    lastResetTime = now;
-  }
-
-  if (apiCallsCount >= API_CALLS_PER_WINDOW) {
-    await sleep(TIME_WINDOW_MS - (now - lastResetTime));
-    apiCallsCount = 0;
-    lastResetTime = Date.now();
-  }
-  
-  apiCallsCount++;
+// Konfigurasjon for API-kall
+const API_CONFIG = {
+  BATCH_SIZE: 1,  // Antall samtidige API-kall
+  INITIAL_DELAY: 2000,  // 2 sekunder
+  MAX_RETRIES: 5,
+  MAX_BACKOFF: 32000,  // Maksimal ventetid mellom forsøk
+  BASE_DELAY: 2000,    // Basis ventetid for exponential backoff
 };
 
-const retryWithBackoff = async (fn, retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY) => {
-  try {
-    await waitForRateLimit();
-    return await fn();
-  } catch (error) {
-    if (retries === 0) {
-      throw error;
+// Queue for å håndtere API-kall sekvensielt
+class RequestQueue {
+  constructor() {
+    this.queue = [];
+    this.processing = false;
+  }
+
+  async add(request) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ request, resolve, reject });
+      this.process();
+    });
+  }
+
+  async process() {
+    if (this.processing || this.queue.length === 0) return;
+    this.processing = true;
+
+    const { request, resolve, reject } = this.queue.shift();
+    try {
+      const result = await this.executeWithRetry(request);
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    } finally {
+      this.processing = false;
+      if (this.queue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, API_CONFIG.INITIAL_DELAY));
+        this.process();
+      }
     }
-    console.log(`Retry attempt left: ${retries}. Waiting ${delay}ms before next attempt.`);
-    await sleep(delay);
-    return retryWithBackoff(fn, retries - 1, delay * BACKOFF_FACTOR);
   }
-};
+
+  async executeWithRetry(request, attempt = 1) {
+    try {
+      return await request();
+    } catch (error) {
+      if (attempt >= API_CONFIG.MAX_RETRIES) {
+        throw error;
+      }
+
+      const delay = Math.min(
+        API_CONFIG.BASE_DELAY * Math.pow(2, attempt),
+        API_CONFIG.MAX_BACKOFF
+      );
+      
+      console.log(`Forsøk ${attempt}/${API_CONFIG.MAX_RETRIES} feilet. Venter ${delay}ms før neste forsøk.`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      return this.executeWithRetry(request, attempt + 1);
+    }
+  }
+}
+
+const requestQueue = new RequestQueue();
 
 const ansatte = [
   { navn: 'Bjørn', epost: 'bjornu@leancommunications.no' },
@@ -99,6 +121,7 @@ const ResourceCalendar = ({ graphClient }) => {
     try {
       const alleData = {};
       
+      // Hent data sekvensielt for hver ansatt
       for (const ansatt of ansatte) {
         console.log('Prøver å hente data for:', ansatt.navn);
         
@@ -110,6 +133,11 @@ const ResourceCalendar = ({ graphClient }) => {
           const hendelser = await hentKalenderHendelser(bruker.id, startDato, sluttDato);
           console.log('Kalenderhendelser for', ansatt.navn, ':', hendelser.length, 'hendelser');
           alleData[ansatt.navn] = hendelser;
+          
+          // Vent litt mellom hver ansatt for å unngå rate-limiting
+          if (ansatte.indexOf(ansatt) < ansatte.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, API_CONFIG.INITIAL_DELAY));
+          }
         }
       }
       
@@ -123,16 +151,14 @@ const ResourceCalendar = ({ graphClient }) => {
 
   const hentBrukerInfo = async (ansatt) => {
     try {
-      const getBrukerInfo = async () => {
+      return await requestQueue.add(async () => {
         const resultat = await graphClient.api(`/users/${ansatt.epost}/calendar`)
           .get();
         return { id: resultat.owner.address, displayName: ansatt.navn };
-      };
-
-      return await retryWithBackoff(getBrukerInfo);
+      });
     } catch (error) {
       try {
-        const getDelteKalendere = async () => {
+        return await requestQueue.add(async () => {
           const delte = await graphClient.api('/me/calendars')
             .get();
           const kalender = delte.value.find(k => 
@@ -141,20 +167,18 @@ const ResourceCalendar = ({ graphClient }) => {
           if (kalender) {
             return { id: kalender.owner.address, displayName: ansatt.navn };
           }
-        };
-
-        return await retryWithBackoff(getDelteKalendere);
+          return null;
+        });
       } catch (innerError) {
         console.error(`Feil ved henting av delte kalendere for ${ansatt.navn}:`, innerError);
+        return null;
       }
-      console.error(`Feil ved henting av brukerinfo for ${ansatt.navn}:`, error);
-      return null;
     }
   };
 
   const hentKalenderHendelser = async (brukerId, start, slutt) => {
     try {
-      const getHendelser = async () => {
+      return await requestQueue.add(async () => {
         const resultat = await graphClient.api(`/users/${brukerId}/calendar/calendarView`)
           .query({
             startDateTime: start.toISOString(),
@@ -170,19 +194,17 @@ const ResourceCalendar = ({ graphClient }) => {
         let nextLink = resultat['@odata.nextLink'];
         
         while (nextLink) {
-          await waitForRateLimit();
+          await new Promise(resolve => setTimeout(resolve, API_CONFIG.INITIAL_DELAY));
           const nesteResultat = await graphClient.api(nextLink).get();
           hendelser = [...hendelser, ...nesteResultat.value];
           nextLink = nesteResultat['@odata.nextLink'];
         }
         
         return hendelser;
-      };
-
-      return await retryWithBackoff(getHendelser);
+      });
     } catch (error) {
       try {
-        const getDelteHendelser = async () => {
+        return await requestQueue.add(async () => {
           const delte = await graphClient.api('/me/calendars')
             .get();
           const kalender = delte.value.find(k => 
@@ -204,7 +226,7 @@ const ResourceCalendar = ({ graphClient }) => {
             let nextLink = resultat['@odata.nextLink'];
             
             while (nextLink) {
-              await waitForRateLimit();
+              await new Promise(resolve => setTimeout(resolve, API_CONFIG.INITIAL_DELAY));
               const nesteResultat = await graphClient.api(nextLink).get();
               hendelser = [...hendelser, ...nesteResultat.value];
               nextLink = nesteResultat['@odata.nextLink'];
@@ -212,14 +234,12 @@ const ResourceCalendar = ({ graphClient }) => {
             
             return hendelser;
           }
-        };
-
-        return await retryWithBackoff(getDelteHendelser);
+          return [];
+        });
       } catch (innerError) {
         console.error('Feil ved henting av delte kalenderhendelser:', innerError);
+        return [];
       }
-      console.error('Feil ved henting av kalenderhendelser:', error);
-      return [];
     }
   };
 
