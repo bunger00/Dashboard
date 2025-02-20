@@ -2,7 +2,7 @@ export const msalConfig = {
   auth: {
     clientId: "3c505e57-4b6c-4118-9dd5-566660ff3bd9",
     authority: "https://login.microsoftonline.com/leancommunications.no",
-    redirectUri: "http://localhost:3000"
+    redirectUri: "https://lean-dashboard.netlify.app"
   },
   cache: {
     cacheLocation: "sessionStorage",
